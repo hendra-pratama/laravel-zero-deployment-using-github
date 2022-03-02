@@ -25,10 +25,11 @@ in this particular case I teach you how to implement Zero Downtime Deployment us
 - This offer can last on small and middle projects that requires 15-30 minutes each run
 
 ### 3. Preparations
-
- - [ ] Your Laravel Project
- - [ ] Hosting that can access through ssh (e.g: [DigitalOcean](https://www.digitalocean.com/)
+ - [ ] Use PHP 8.0
+ - [ ] Your Laravel Project, on this article i'm using Laravel 8
+ - [ ] Web Hosting that can access through ssh (e.g: [DigitalOcean](https://www.digitalocean.com/))
  - [ ] Domain Name
+ - [ ] [Git Bash](https://git-scm.com/downloads)  as primary terminal
  
 ##  Install and Setup Deployer on Project
 
@@ -36,17 +37,27 @@ in this particular case I teach you how to implement Zero Downtime Deployment us
 
 First, open your Laravel Project and run following command:
 
-    composer require --dev deployer/dist
+    composer require deployer/deployer:v7.0.0-rc.4
 
-After installation complete, run:
+Next, let's create [bash alias](https://laravel-news.com/bash-aliases) to make shortcurt ***dep*** instead of ***vendor/deployer/deployer/bin/dep***
+
+>  - Open bash terminal
+>  - type: nano ~/.bashrc
+>  - type: alias dep="vendor/deployer/deployer/bin/dep"
+>  - save and exit
+>  - type: source ~/.bashrc to reload configuration
+
+After installation and config our bash then we can type:
 
     dep init
 
+![enter image description here](https://user-images.githubusercontent.com/5717315/156354326-f61360ab-625a-45a3-8878-76ecc011f88c.png)
+
 Deployer will ask you a few question and after finishing you will have a **deploy.php** or **deploy.yaml** file but we'll continue with **deploy.php**. This is our deployment recipe. It contains hosts, tasks and requires other recipes. All framework recipes that come with Deployer are based on the [common](https://deployer.org/docs/7.x/recipe/common) recipe.
 
-In this particular article you can copy and paste below config on your deploy.php
+In this particular article to save the time you can copy and paste below config and replace your ***deploy.php*** 
 
-### 2. Copy the configuration
+
      <?php
     
     namespace Deployer;
@@ -54,7 +65,11 @@ In this particular article you can copy and paste below config on your deploy.ph
     require 'recipe/laravel.php';
     require 'contrib/npm.php';
     require 'contrib/rsync.php';
-    
+
+    ///////////////////////////////////    
+    // Config
+    ///////////////////////////////////
+
     set('application', 'Your Project Name');
     set('repository', 'git@github.com:change-with-your-repo-url.git'); // Git Repository
     set('ssh_multiplexing', true);  // Speed up deployment
@@ -83,7 +98,10 @@ In this particular article you can copy and paste below config on your deploy.ph
         upload('.env', get('deploy_path') . '/shared');
     });
     
+    ///////////////////////////////////
     // Hosts
+    ///////////////////////////////////
+    
     host('prod') // Name of the server
     ->setHostname('xxx.xxx.xxx.xxx') // Hostname or IP address
     ->set('remote_user', 'root') // SSH user
@@ -91,6 +109,10 @@ In this particular article you can copy and paste below config on your deploy.ph
     ->set('deploy_path', '/var/www/project-path'); // Deploy path
     
     after('deploy:failed', 'deploy:unlock');  // Unlock after failed deploy
+    
+    ///////////////////////////////////
+    // Tasks
+    ///////////////////////////////////
     
     desc('Start of Deploy the application');
     
@@ -110,7 +132,7 @@ In this particular article you can copy and paste below config on your deploy.ph
    
     desc('End of Deploy the application');
 
-The code above is self explanatory, so you can read it.
+The code above is self explanatory, i believe you can read and understand in, if you can please go deployer documentation and search the syntax you not understand.
 
 
 ### Add Github Workflow
@@ -192,3 +214,6 @@ it's not finish, we still need to fill credentials about our server so it can ac
 
 ## Conclussion
 So let me recap what we've done, so after doing all the step above our code will automatically publish to server and go live. You can also seperate the server with "Staging" & Production" and also run your own test right on this workflow.
+
+
+
