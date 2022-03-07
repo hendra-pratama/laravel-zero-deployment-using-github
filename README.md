@@ -25,11 +25,12 @@ in this particular case I teach you how to implement Zero Downtime Deployment us
 - This offer can last on small and middle projects that requires 15-30 minutes each run
 
 ### 3. Preparations
- - [ ] Use PHP 8.0
+ - [ ]  [Github Account](https://github.com/)
+ - [ ] Use [PHP 8.0](https://windows.php.net/download#php-8.0)
  - [ ] Your Laravel Project, on this article i'm using Laravel 8
  - [ ] Web Hosting that can access through ssh (e.g: [DigitalOcean](https://www.digitalocean.com/))
  - [ ] Domain Name
- - [ ] [Git Bash](https://git-scm.com/downloads)  as primary terminal
+ - [ ] [Git Bash](https://git-scm.com/downloads)  as primary terminal (optional)
  
 ##  Install and Setup Deployer on Project
 
@@ -55,6 +56,7 @@ After installation and config our bash then we can type:
 
 Deployer will ask you a few question and after finishing you will have a **deploy.php** or **deploy.yaml** file but we'll continue with **deploy.php**. This is our deployment recipe. It contains hosts, tasks and requires other recipes. All framework recipes that come with Deployer are based on the [common](https://deployer.org/docs/7.x/recipe/common) recipe.
 
+### 2. Install Deployer
 In this particular article to save the time you can copy and paste below config and replace your ***deploy.php*** 
 
 
@@ -103,7 +105,7 @@ In this particular article to save the time you can copy and paste below config 
     ///////////////////////////////////
     
     host('prod') // Name of the server
-    ->setHostname('xxx.xxx.xxx.xxx') // Hostname or IP address
+    ->setHostname('xxx.xxx.xxx') // Hostname or IP address
     ->set('remote_user', 'root') // SSH user
     ->set('branch', 'main') // Git branch
     ->set('deploy_path', '/var/www/project-path'); // Deploy path
@@ -132,16 +134,24 @@ In this particular article to save the time you can copy and paste below config 
    
     desc('End of Deploy the application');
 
+Please notice you should change this line within your own server config:
+
+>     ->setHostname('xxx.xxx.xxx') // Hostname or IP address
+>     ->set('remote_user', 'root') // SSH user
+>     ->set('branch', 'main') // Git branch
+
 The code above is self explanatory, i believe you can read and understand in, if you can please go deployer documentation and search the syntax you not understand.
 
 
-### Add Github Workflow
+### 2. Add Github Workflow
 
-Create new folder on project root 
+Create new folder and file on your project root 
 
-    .github/workflows/push_workflow.yml
+    touch .github/workflows/push_workflow.yml
 
-Then copy below code 
+*note: This file later will be triggered by Github Action
+
+After created the file above, you need to copy and paste below code 
 
     name: CI/CD Workflow
     
@@ -201,19 +211,73 @@ Then copy below code
 - It will run jobs ***"build-js-production"*** that will build and compile our front end using command ***"npm install"*** & ***"npm run prod"*** then upload the compiling assets to in Artifacts
 - Next, after the second step finish, it will run the second job which is ***"deploy-production"*** , that will deploy our code to the server and trigger the ***"deploy.php"***  that we already prepare.
 
-it's not finish, we still need to fill credentials about our server so it can access the server, the credentials we looking is below
-- secrets.SSH_PRIVATE_KEY
-- secrets.SSH_KNOWN_HOSTS
-- secrets.DOT_ENV_PRODUCTION
+it's not finish, we still need to fill some credentials about our server so it can access the server, the credentials we are looking to add from above code is:
 
-### Add Credentials to Github Secrets 
-1. SSH Private Key
-2. SSH Known Hosts
-3. DOT_ENV_Production
+> - ${{ secrets.SSH_PRIVATE_KEY }}
+> - ${{ secrets.SSH_KNOWN_HOSTS }}
+> - ${{ secrets.DOT_ENV_PRODUCTION }}
 
+### 3. Add Credentials to Github Secrets 
+1. SSH_PRIVATE_KEY
+2. SSH_KNOWN_HOSTS
+3. DOT_ENV_PRODUCTION
+
+What you need to do is open your github repository:
+ - click "Setting"
+ - check sidebar menu and click "Secrets" > "Actions"
+-  click button "New Repository Secret", you need create this 3 times and fill the title exactly like above and fill the value with temporary text. e.g('test')
+
+![enter image description here](https://user-images.githubusercontent.com/5717315/157080566-f0e30aed-eab4-45d9-8aba-fa54571e19cd.png)
+
+![enter image description here](https://user-images.githubusercontent.com/5717315/157081844-78cc045a-34dd-4635-9734-f14ecc7a3b62.png)
+
+
+if you follow the steps you'll have 3 data under **Repository secrets** like image below:
+![enter image description here](https://user-images.githubusercontent.com/5717315/157080726-a292edeb-5dd0-4335-8c40-356c4f5f143d.png)
+
+It's not finished yet, because the next step is we need to update all the secrets with the real value. please follow this step
+
+####  SSH PRIVATE KEY
+
+We need to generate SSH Key From your server:
+
+First, open your server using terminal, and paste the text below.
+
+    ssh-keygen -t ed25519 -C "your_email@example.com"
+
+When you're prompted to "Enter a file in which to save the key," press Enter. This accepts the default file location and if you ask to input passphrase, leave it blank and just hit enter.
+
+Next, check your generated key with text below.
+
+    ls ~/.ssh
+
+Next, we need to copy the key without .pub extension
+
+    cat ~/.ssh/id_rsa
+
+the output is similiar to this
+![enter image description here](https://user-images.githubusercontent.com/5717315/157078723-3d298d13-7a4e-4a8f-830a-cc8bf24aee19.png)
+
+update your github secret paste the data.
+
+#### SSH_KNOWN_HOSTS
+Next, we need the `KNOWN_HOSTS` value. This will later prevent GitHub Actions from asking you, if you want to connect to your own server. (Without the known_hosts value, the workflow will timeout, as you can't manually interact with the workflow run.  
+To get this value, execute the following command from your local CLI.
+```
+ssh-keyscan <name_of_your_host (eg. example.com)>
+```
+The output might look like this:
+```
+<name_of_your_host> ssh-rsa AAAABBBCCCDD...
+```
+####  DOT_ENV_PRODUCTION
+we need to copy and paste our laravel .env data here, and update all the connection e.g database, mail, others here, because at the end this .env will be push to our server later on.
+
+### 3. Push the code
+Finally with every change we've been made, let's push all our change to **main** branch. after that you need to look our **Actions** on github.
+![enter image description here](https://user-images.githubusercontent.com/5717315/157085282-6b609036-766b-4e7c-a0fb-b86020b6b825.png)
+
+as you can see on image exampe, the workflow can have status Success indicate with green checklist and Failed indicate with red button. You can see the details by click the title.
 
 ## Conclussion
 So let me recap what we've done, so after doing all the step above our code will automatically publish to server and go live. You can also seperate the server with "Staging" & Production" and also run your own test right on this workflow.
-
-
-
